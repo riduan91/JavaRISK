@@ -192,7 +192,7 @@ public class State {
 		this.available_soldiers_to_add = new int[this.nb_players];
 		for (int player = 0; player < this.nb_players; player++){
 			//this.available_soldiers_to_add[player] = 21;
-			this.available_soldiers_to_add[player] = 2;
+			this.available_soldiers_to_add[player] = 5;
 		}
 		
 		//Cards held by players
@@ -445,11 +445,19 @@ public class State {
 		
 	}
 	
-	public void finishTuneIn(int player){
+	public boolean okForFinishTuneIn(int player){
 		if (this.battle_status[player] != STATUS_ACTIVE_FOR_TUNE_IN){
-			System.out.println("Error: Status inactive");
+			return false;
+		}
+		
+		return true;
+	}
+	
+	public void finishTuneIn(int player){
+		if (!okForFinishTuneIn(player)){
 			return;
 		}
+		
 		if (!obligedToTuneIn(player)){
 			this.available_soldiers_to_add[player] += pointsFromTerritories(player) + pointsFromContinents(player);
 			goToNextStep();
@@ -562,27 +570,25 @@ public class State {
 	}
 	
 	//THIS IS FOR DISTRIBUTION
-	public void addMany(int player, int territory, int number){
-		System.out.println("Player " + player + " wants to add " + number + " soldier to " + territory);
+	public boolean okForAddMany(int player, int territory, int number){
 		if (this.battle_status[player] != STATUS_ACTIVE_FOR_DISTRIBUTION){
-			System.out.println("Error: Status inactive");
-			return;
+			return false;
 		}
 		
 		if (this.territories_by_player[territory] != player){
-			System.out.println("Error: This is not his territory.");
-			return;
+			return false;
 		}
 		
 		if (this.available_soldiers_to_add[player] < number){
-			System.out.println("Error: Not enough soldiers.");
-			return;
+			return false;
 		}
-		
-		else {
+		return true;
+	}
+	
+	public void addMany(int player, int territory, int number){
+		if (this.okForAddMany(player, territory, number)){
 			this.nb_soldiers_on_territory[territory] += number;
 			this.available_soldiers_to_add[player] -= number;
-			//System.out.println("Action completed");
 		}		
 		
 		if (this.available_soldiers_to_add[player] == 0)
@@ -644,6 +650,7 @@ public class State {
 			System.out.println(TERRITORIES[territory_to] + " lost, no under control of player " + player);
 			this.territories_by_player[territory_to] = player;
 			this.nb_soldiers_on_territory[territory_to] += Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1);
+			this.nb_soldiers_on_territory[territory_from] -= Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1);
 		}
 		
 		return true;
