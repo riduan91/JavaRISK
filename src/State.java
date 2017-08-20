@@ -192,7 +192,7 @@ public class State {
 		this.available_soldiers_to_add = new int[this.nb_players];
 		for (int player = 0; player < this.nb_players; player++){
 			//this.available_soldiers_to_add[player] = 21;
-			this.available_soldiers_to_add[player] = 5;
+			this.available_soldiers_to_add[player] = 1;
 		}
 		
 		//Cards held by players
@@ -329,77 +329,32 @@ public class State {
 	}
 	
 	//THIS IS FOR TUNE IN
-	public boolean hasThreeOfHuman(int player){
-		if (Collections.frequency(this.cards_held_by_player.get(player), HUMAN) >= 3){
+	public boolean hasThreeOfSameKind(ArrayList<Integer> symbols, int player, int kind){
+		if (Collections.frequency(symbols, kind) >= 3){
 			return true;
 		}
 		return false;
 	}
 	
-	public boolean hasThreeOfHorse(int player){
-		if (Collections.frequency(this.cards_held_by_player.get(player), HORSE) >= 3){
-			return true;
-		}
-		return false;
-	}
-	
-	public boolean hasThreeOfCanon(int player){
-		if (Collections.frequency(this.cards_held_by_player.get(player), CANON) >= 3){
-			return true;
-		}
-		return false;
-	}
-	
-	public void removeThreeOfSameKind(int player, int kind){
-		if (Collections.frequency(this.cards_held_by_player.get(player), kind) >= 3)
-			return;
-			
-		int count = 0;
-		for (int i = this.cards_held_by_player.get(player).size() - 1; i >= 0; i--){
-			if (this.cards_held_by_player.get(player).get(i) == kind){
-				this.cards_held_by_player.get(player).remove(i);
-				count += 1;
-			}
-			if (count >= 3) 
-				break;
-		}
-	}
-	
-	public boolean hasThreeOfDifferentKinds(int player){
-		if (this.cards_held_by_player.get(player).contains(HUMAN) && this.cards_held_by_player.get(player).contains(HORSE) && this.cards_held_by_player.get(player).contains(CANON)){
+	public boolean hasThreeOfDifferentKinds(ArrayList<Integer> symbols, int player){
+		if (symbols.contains(HUMAN) && symbols.contains(HORSE) && symbols.contains(CANON)){
 			return true;
 		}	
 		return false;
 	}
 	
-	public void removeThreeOfDifferentKinds(int player){
-		if (!hasThreeOfDifferentKinds(player)) 
-			return;
-		
-		for (int i = this.cards_held_by_player.get(player).size() - 1; i >= 0; i--){
-			if (this.cards_held_by_player.get(player).get(i) == HUMAN){
-				this.cards_held_by_player.get(player).remove(i);
-				break;
-			}
-		}
-		
-		for (int i = this.cards_held_by_player.get(player).size() - 1; i >= 0; i--){
-			if (this.cards_held_by_player.get(player).get(i) == HORSE){
-				this.cards_held_by_player.get(player).remove(i);
-				break;
-			}	
-		}
-
-		for (int i = this.cards_held_by_player.get(player).size() - 1; i >= 0; i--){
-			if (this.cards_held_by_player.get(player).get(i) == CANON){
-				this.cards_held_by_player.get(player).remove(i);
-				break;
-			}	
-		}
-	}
-	
 	public boolean ableToTurnIn(int player){
-		return hasThreeOfHuman(player) || hasThreeOfHorse(player) || hasThreeOfCanon(player) || hasThreeOfDifferentKinds(player);
+		
+		if (this.battle_status[player] != STATUS_ACTIVE_FOR_TUNE_IN){
+			return false;
+		}
+		
+		ArrayList<Integer> symbols = new ArrayList<Integer>();
+		for (Integer card: this.cards_held_by_player.get(player)){
+			symbols.add(SYMBOL_ON_CARD[card]);
+		}
+		
+		return hasThreeOfSameKind(symbols, player, HUMAN) || hasThreeOfSameKind(symbols, player, HORSE) || hasThreeOfSameKind(symbols, player, CANON) || hasThreeOfDifferentKinds(symbols, player);
 	}
 	
 	public boolean obligedToTuneIn(int player){		
@@ -420,23 +375,16 @@ public class State {
 			return;
 		}
 		
-		Arrays.sort(cards);
+		int a = SYMBOL_ON_CARD[cards[0]];
+		int b = SYMBOL_ON_CARD[cards[1]];
+		int c = SYMBOL_ON_CARD[cards[2]];
 		
-		if (this.cards_held_by_player.get(player).get(cards[0]) == this.cards_held_by_player.get(player).get(cards[1]) 
-				&& this.cards_held_by_player.get(player).get(cards[1]) == this.cards_held_by_player.get(player).get(cards[2])){
+		if ((a==b && b==c) || a*a + b*b + c*c == 5){
 			//Only one of the following will have effects
-			this.cards_held_by_player.get(player).remove(cards[2]);
-			this.cards_held_by_player.get(player).remove(cards[1]);
-			this.cards_held_by_player.get(player).remove(cards[0]);
-			this.available_soldiers_to_add[player] += NB_TUNED_IN_SOLDIERS[this.next_tune_in_index ++];
-		}
-			
-		else if (this.cards_held_by_player.get(player).get(cards[0]) == HUMAN &&  this.cards_held_by_player.get(player).get(cards[1]) == HORSE
-				&& this.cards_held_by_player.get(player).get(cards[2]) == CANON){
-			//Only one of the following will have effects
-			this.cards_held_by_player.get(player).remove(cards[2]);
-			this.cards_held_by_player.get(player).remove(cards[1]);
-			this.cards_held_by_player.get(player).remove(cards[0]);
+			for (int i = this.cards_held_by_player.get(player).size()-1; i >= 0 ; --i){
+				if (this.cards_held_by_player.get(player).get(i) == cards[0] || this.cards_held_by_player.get(player).get(i) == cards[1] || this.cards_held_by_player.get(player).get(i) == cards[2])
+					this.cards_held_by_player.get(player).remove(i);
+			}
 			this.available_soldiers_to_add[player] += NB_TUNED_IN_SOLDIERS[this.next_tune_in_index ++];
 		}
 		
@@ -469,7 +417,7 @@ public class State {
 	
 	public int pointsFromTerritories(int player){
 		System.out.println("Player " + player + " has " + this.getTerritoriesOccupedBy(player).size() / 3 + " points from territories.");
-		return this.getTerritoriesOccupedBy(player).size() / 3;
+		return Math.max(this.getTerritoriesOccupedBy(player).size() / 3, 3);
 	}
 	
 	public boolean isNorthAmericaControlledBy(int player){
@@ -756,7 +704,7 @@ public class State {
 	
 	public void takeACard(int player){
 		Integer random_card = this.shuffled_cards.remove(0);
-		this.cards_held_by_player.get(player).add(SYMBOL_ON_CARD[random_card]);
+		this.cards_held_by_player.get(player).add(random_card);
 		System.out.println("Player " + player + " has received card " + random_card);
 	}
 	
@@ -830,5 +778,31 @@ public class State {
 		}
 		
 		return false;
+	}
+	
+	public ArrayList<Integer> winner(){
+		
+		ArrayList<Integer> winners = new ArrayList<Integer>();
+		for (int player = 0; player < this.nb_players; player++){
+			if (missionCompleted(player)){
+				winners.add(player);
+				return winners;
+			}
+		}
+
+		int max = 0;
+		for (int player = 0; player < this.nb_players; player++){
+			if (this.getTerritoriesOccupedBy(player).size() > max){
+				max = this.getTerritoriesOccupedBy(player).size();
+			}			
+		}
+		
+		for (int player = 0; player < this.nb_players; player++){
+			if (this.getTerritoriesOccupedBy(player).size() == max){
+				winners.add(player);
+			}			
+		}
+		
+		return winners;
 	}
 }

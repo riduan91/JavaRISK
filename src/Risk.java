@@ -39,15 +39,15 @@ public class Risk extends HttpServlet {
 		out.println("<head><title>" + title + "</title><meta charset=\"UTF-8\" /><script type=\"text/javascript\" src=\"show_map.js\"></script><link rel='stylesheet' type='text/css' href='main.css'></head>");
 		out.println("<body>");
 		
-		out.println("<img id='territoryA' src='Img/A.png' style='margin-left:10px; margin-top:10px; width:800px; height:440px; opacity:1; position:fixed'>");
+		out.println("<img id='territoryA' src='Img/A.png' style='left:10px; top:10px; width:800px; height:440px; opacity:1; position:absolute'>");
 		
 		for (int i = 0; i < state.NB_TERRITORIES; ++i){
-			out.println("<img id='territory" + i + "' src='Img/" + i + ".png' style='margin-left:10px; margin-top:10px; width:800px; height:440px; opacity:0.4; position:fixed'>");
+			out.println("<img id='territory" + i + "' src='Img/" + i + ".png' style='left:10px; top:10px; width:800px; height:440px; opacity:1.0; position:absolute'>");
 		}
 		
-		out.println("<canvas id='myCanvas' width='800' height='440' style=' position:absolute; z-index:99; opacity: 0.8'></canvas>");
+		out.println("<canvas id='myCanvas' width='800' height='440' style='left:10px; top:10px; position:absolute; z-index:99; opacity: 0.8'></canvas>");
 		
-		out.println("<img src='Img/A.png' style='margin-left:10px; margin-top:10px; width:800px; height:440px; opacity:0; position:absolute; z-index:100;' usemap='#worldmap'>");
+		out.println("<img src='Img/A.png' style='left:10px; top:10px; width:800px; height:440px; opacity:0; position:absolute; z-index:100;' usemap='#worldmap'>");
 		out.println("<map id='worldmap' name='worldmap'>");
 		
 		for (int i = 0; i < state.NB_TERRITORIES; ++i){
@@ -58,6 +58,7 @@ public class Risk extends HttpServlet {
 		}
 		
 		out.println("</map>");
+		
 		
 		out.println("<input type='text' id='territories_by_player' value='" + Arrays.toString(state.territories_by_player) + "'style='display:none;'></input>");
 		out.println("<input type='text' id='nb_soldiers_on_territory' value='" + Arrays.toString(state.nb_soldiers_on_territory) + "'style='display:none;'></input>");
@@ -70,28 +71,79 @@ public class Risk extends HttpServlet {
 			out.println("<input type='text' id='chosen_territory' value='' style='display:none;'></input>");
 		}
 		//out.println("<input type='text' id='chosen_territory_to' value='' style='display:none;'></input>");
-		
-		out.println("<br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/><br/>");
-		out.println("<form style='margin-left:10px; top:480px; position:absolute'>");
+		defineCards(out);
+		defineMission(out);
+		out.println("<form style='left:820px; top:10px; position:absolute'>");
 		out.println("<h3>Now it's turn of player " + active_player + "</h3>");
 		defineForm(out);
+		out.println("<p id='notification'></p>");
 		out.println("</form>");
 		
+		out.println("<form style='left:820px; top:210px; position:absolute'>");
+		out.println("<h3>Next tune in: <strong>" + state.NB_TUNED_IN_SOLDIERS[state.next_tune_in_index] + "</strong> regiments.</h3>");
+		out.println("</form>");
 		/*
 		String[] Description = state.toString().split("\n");
 		for (String paragraph: Description){
 			out.println("<p>" + paragraph + "</p>");
 		}
 		*/
+		
+		if (state.finished()){
+			checkFinish(out);
+		}
+		
 		out.println("</body>");
 		out.println("</html>");
+    }
+    
+    void checkFinish(PrintWriter out){
+    	out.println("<h1 style='left:10px; top:480px; width:140px; height:220px; position:absolute'");
+    	for (int player=0; player < state.nb_players; ++player){
+        	if (state.missionCompleted(player)){
+        		out.println("<p>Player " + player + " has completed his mission.</p>");
+        		out.println("<img id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:810px; width:140px; height:220px; position:absolute'>");
+        		return;
+        	}
+    	}
+    	
+    	out.print("<p>Player ");
+    	for (Integer player: state.winner()){
+    		out.print(player + " ");
+    	}
+    	out.println(" win(s) with the most territories.");
+    }
+    
+    void defineCards(PrintWriter out){
+    	int active_player = state.currentActivePlayer(); 
+    	int index = 0;
+    	int[] X = {10, 175, 340, 505, 670};
+    	int[] Y = {480, 480, 480, 480, 480};
+    	for (Integer card: state.cards_held_by_player.get(active_player)){
+    		out.println("<img id='card" + card + "' src='Img/CA.png' style='left:" + X[index] + "px; top:" + Y[index++] +"px; width:140px; height:220px; position:absolute' onclick='updowncard(" + active_player + ", " + card + ");'>");
+    	}
+    	
+    	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_TUNE_IN){
+    		out.println("<input type='text' id='tune_in_card_1' value='' style='display:none;'></input>");
+    		out.println("<input type='text' id='tune_in_card_2' value='' style='display:none;'></input>");
+    		out.println("<input type='text' id='tune_in_card_3' value='' style='display:none;'></input>");
+    		out.println("<a id='submit_for_tune_in' style='left:10px; top:720px; position:absolute' href=''>Finish tune in</a>");
+    	}
+    	
+    }
+    
+    void defineMission(PrintWriter out){
+    	int active_player = state.currentActivePlayer(); 
+    	int X = 850;
+    	int Y = 480;
+    	int mission = state.mission_of_player[active_player];
+    	out.println("<img id='mission' src='Img/MA.png' style='left:" + X + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
     }
     
     void defineForm(PrintWriter out){
     	int active_player = state.currentActivePlayer();    	
     	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
     		out.println("<p>Number of soldiers left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-    		out.println("<p>Click on a territory to add additional soldiers</p>");
     		out.println("<input type='text' id='battle_status' value='10' style='display:none;'></input>");
     		return;
     	}
@@ -101,8 +153,7 @@ public class Risk extends HttpServlet {
     			state.finishTuneIn(active_player);
     			out.println("<input type='text' id='battle_status' value='2' style='display:none;'>");
         		out.println("<p>Number of soldiers left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-        		out.println("<p>Click on a territory to add additional soldiers</p>");
-        		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0></p>");
+        		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0 onchange='notify(" + state.battle_status[active_player] +")'></p>");
     			return;
     		} else {
         		out.println("<input type='text' id='battle_status' value='1' style='display:none;'></input>");
@@ -120,25 +171,19 @@ public class Risk extends HttpServlet {
     	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_DISTRIBUTION){
     		out.println("<input type='text' id='battle_status' value='2' style='display:none;'>");
     		out.println("<p>Number of soldiers left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-    		out.println("<p>Click on a territory to add additional soldiers</p>");
-    		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0></p>");
+    		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0 onchange='notify()'></p>");
     		return;
     	}
     	
     	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_ATTACK){
     		out.println("<input type='text' id='battle_status' value='3' style='display:none;'></input>");
-    		out.println("<p id='from_notification'>Click to choose a territory to attack from.</p>");
-    		out.println("<p id='to_notification'>Then a territory to attack to.</p>");
     		out.println("<a href='Risk?action=FINISH_ATTACK&player=" + active_player + "'>Finish attack</a>");
     		return;
     	}
     	
     	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_FORTIFICATION){
     		out.println("<input type='text' id='battle_status' value='4' style='display:none;'></input>");
-    		out.println("<p id='from_notification'>Click to choose a territory to move soldiers from.</p>");
-    		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0></p>");
-    		out.println("<p id='from_notification'>Then click to choose a territory to move soldiers to.</p>");
-    		out.println("<p id='to_notification'>Then a territory to attack to.</p>");
+    		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0 onchange='notify()'></p>");
     		out.println("<a href='Risk?action=FINISH_FORTIFY&player=" + active_player + "'>Finish fortification</a>");
     		return;
     	}
@@ -159,11 +204,11 @@ public class Risk extends HttpServlet {
 		}
 		
 		if (action.equals("TUNE_IN")){
-			int card0 = Integer.parseInt(request.getParameter("card0"));
 			int card1 = Integer.parseInt(request.getParameter("card1"));
 			int card2 = Integer.parseInt(request.getParameter("card2"));
+			int card3 = Integer.parseInt(request.getParameter("card3"));
 			
-			state.tuneIn(player, new int[]{card0, card1, card2});
+			state.tuneIn(player, new int[]{card1, card2, card3});
 			display(request, response, player);
 		}
 		
