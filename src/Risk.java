@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.stream.IntStream;
 
 import javax.servlet.ServletException;
 import javax.servlet.annotation.WebServlet;
@@ -22,7 +23,6 @@ public class Risk extends HttpServlet {
     public Risk() {
         super();
     	state = new State(3);
-    	save = false;
     }
     
     void display(HttpServletRequest request, HttpServletResponse response, int player) throws ServletException, IOException {
@@ -54,7 +54,11 @@ public class Risk extends HttpServlet {
 			String href = "";
 			if (state.okForAddOne(active_player, i))
 				href = "href='Risk?action=ADD_ONE&player=" + active_player + "&territory=" + state.TERRITORIES[i] + "'"; 
+			if (state.attacking){
+				out.println("<area id='area" + i + "' shape='rect' onmouseover='brighten(" + state.territories_by_player[state.territory_index.get(request.getParameter("territory_to"))] + ", " + i +")' onmouseout='darken(" + i +")'" + href + " ;>");
+			} else{
 				out.println("<area id='area" + i + "' shape='rect' onmouseover='brighten(" + active_player + ", " + i +")' onmouseout='darken(" + i +")'" + href + " ;>");
+			}		
 		}
 		
 		out.println("</map>");
@@ -62,10 +66,9 @@ public class Risk extends HttpServlet {
 		
 		out.println("<input type='text' id='territories_by_player' value='" + Arrays.toString(state.territories_by_player) + "'style='display:none;'></input>");
 		out.println("<input type='text' id='nb_soldiers_on_territory' value='" + Arrays.toString(state.nb_soldiers_on_territory) + "'style='display:none;'></input>");
-		if (save){
+		if (state.save){
 			int territory_from = state.territory_index.get(request.getParameter("territory_from"));
 			out.println("<input type='text' id='chosen_territory' value='" + territory_from + "' style='display:none;'></input>");
-			save = false;
 		}
 		else{
 			out.println("<input type='text' id='chosen_territory' value='' style='display:none;'></input>");
@@ -73,9 +76,10 @@ public class Risk extends HttpServlet {
 		//out.println("<input type='text' id='chosen_territory_to' value='' style='display:none;'></input>");
 		defineCards(out);
 		defineMission(out);
+		defineDices(out, request);
 		out.println("<form style='left:820px; top:10px; position:absolute'>");
 		out.println("<h3>Now it's turn of player " + active_player + "</h3>");
-		defineForm(out);
+		defineForm(out, player);
 		out.println("<p id='notification'></p>");
 		out.println("</form>");
 		
@@ -98,11 +102,11 @@ public class Risk extends HttpServlet {
     }
     
     void checkFinish(PrintWriter out){
-    	out.println("<h1 style='left:10px; top:480px; width:140px; height:220px; position:absolute'");
+    	out.println("<h1 style='left:10px; top:720px; width:140px; height:220px; position:absolute'");
     	for (int player=0; player < state.nb_players; ++player){
         	if (state.missionCompleted(player)){
         		out.println("<p>Player " + player + " has completed his mission.</p>");
-        		out.println("<img id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:810px; width:140px; height:220px; position:absolute'>");
+        		out.println("<img id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='width:140px; height:220px; position:absolute'>");
         		return;
         	}
     	}
@@ -127,7 +131,7 @@ public class Risk extends HttpServlet {
     		out.println("<input type='text' id='tune_in_card_1' value='' style='display:none;'></input>");
     		out.println("<input type='text' id='tune_in_card_2' value='' style='display:none;'></input>");
     		out.println("<input type='text' id='tune_in_card_3' value='' style='display:none;'></input>");
-    		out.println("<a id='submit_for_tune_in' style='left:10px; top:720px; position:absolute' href=''>Finish tune in</a>");
+    		out.println("<a id='submit_for_tune_in' style='left:10px; top:720px; position:absolute' href=''>Tune in</a>");
     	}
     	
     }
@@ -140,11 +144,28 @@ public class Risk extends HttpServlet {
     	out.println("<img id='mission' src='Img/MA.png' style='left:" + X + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
     }
     
-    void defineForm(PrintWriter out){
+    void defineDices(PrintWriter out, HttpServletRequest request){
+    	int[] X = {850, 920, 990};
+    	int[] Y = {330, 400};
+    	
+    	for (int dice = 0; dice < state.attack_dices.length; dice++){
+    		out.println("<img id='A" + dice + "' src='Img/A" + state.attack_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[0] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    	}
+    	
+    	for (int dice = 0; dice < state.defend_dices.length; dice++){
+    		out.println("<img id='D" + dice + "' src='Img/D" + state.defend_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[1] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    	}
+    	
+    	out.println("<input type='number' id='attacking' value='" + (state.attacking?1:0) + "' style='display:none;'></input>");
+    	out.println("<input type='text' id='defend' value='" + (state.attacking?state.territory_index.get(request.getParameter("territory_to")):"") + "' style='display:none;'></input>");
+    }
+    
+    void defineForm(PrintWriter out, int player){
     	int active_player = state.currentActivePlayer();    	
-    	if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
-    		out.println("<p>Number of soldiers left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-    		out.println("<input type='text' id='battle_status' value='10' style='display:none;'></input>");
+    	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
+    		out.println("<input type='text' id='battle_status' value='10' style='display:none;'>");
+    		out.println("<p>Number of soldiers left: <strong>" + state.available_soldiers_to_add[player] + "</strong></p>");
+    		out.println("<p>Please choose the number of soldiers to distribute: <input id='number' type='number' value=0 onchange='notify()'></p>");
     		return;
     	}
     	
@@ -231,15 +252,16 @@ public class Risk extends HttpServlet {
 			display(request, response, player);
 		}
 		
-		if (action.equals("KEEP_ON_ATTACK")){
+		if (action.equals("DEFEND")){
 			int territory_from = state.territory_index.get(request.getParameter("territory_from"));
 			int territory_to = state.territory_index.get(request.getParameter("territory_to"));
-			state.keepOnAttacking(player, territory_from, territory_to);
+			state.defend(player, territory_from, territory_to);
 			display(request, response, player);
 		}
 		
 		if (action.equals("FINISH_ATTACK")){
 			state.finishAttack(player);
+			state.resetDices();
 			display(request, response, player);
 		}
 		
@@ -257,7 +279,8 @@ public class Risk extends HttpServlet {
 		}
 		
 		if (action.equals("SAVE")){
-			save = true;
+			state.save();
+			state.resetDices();
 			display(request, response, player);
 		}
 	}

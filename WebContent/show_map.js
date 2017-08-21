@@ -54,7 +54,7 @@ function brighten(player, i){
 		document.getElementById("territory" + NEIGHBORS[i][j]).style.opacity = 0.5;
 	}
 	
-	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION){
+	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION || battle_status == STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
 		var number = document.getElementById("number").value;
 		if (number > 0){
 			document.getElementById("area" + i).href = "Risk?action=ADD_MANY&player=" + player + "&territory=" + TERRITORIES[i] + "&number=" + number;
@@ -64,7 +64,12 @@ function brighten(player, i){
 	
 	if (battle_status == STATUS_ACTIVE_FOR_ATTACK){
 		if (document.getElementById("chosen_territory").value != ""){
-			document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
+			if (document.getElementById("attacking").value == 1){
+				document.getElementById("area" + i).href = "Risk?action=DEFEND&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
+			}
+			else{
+				document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
+			}
 		} else {
 			document.getElementById("area" + i).href = "Risk?action=SAVE&player=" + player + "&territory_from=" + TERRITORIES[i];
 		}

@@ -7,6 +7,7 @@
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Random;
+import java.util.stream.IntStream;
 import java.util.Collections;
 import java.util.Arrays;
 
@@ -124,8 +125,12 @@ public class State {
 	int current_card;
 	int[] battle_status;
 	int[] available_soldiers_to_add;
+	boolean attacking;
+	int[] attack_dices;
+	int[] defend_dices;
 	
 	int next_tune_in_index;
+	boolean save;
 	
 	public State(int nb_players){
 		//Read territories name
@@ -186,13 +191,14 @@ public class State {
 		
 		//Initialize original_battle_status
 		this.battle_status = new int[this.nb_players];
-		this.battle_status[0] = STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION;
+		for (int player=0; player < this.nb_players; ++player)
+			this.battle_status[player] = STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION;
 		
 		//Soldiers to add
 		this.available_soldiers_to_add = new int[this.nb_players];
 		for (int player = 0; player < this.nb_players; player++){
-			//this.available_soldiers_to_add[player] = 21;
-			this.available_soldiers_to_add[player] = 1;
+			this.available_soldiers_to_add[player] = 21;
+			//this.available_soldiers_to_add[player] = 1;
 		}
 		
 		//Cards held by players
@@ -205,6 +211,13 @@ public class State {
 		
 		//Current card
 		this.current_card = 0;
+		
+		//Attack dice
+		this.attack_dices = new int[]{0, 0, 0};
+		this.defend_dices = new int[]{0, 0};
+		
+		//Unsave
+		this.save = false;
 	}
 	
 	public ArrayList<Integer> getTerritoriesOccupedBy(int player){
@@ -519,7 +532,7 @@ public class State {
 	
 	//THIS IS FOR DISTRIBUTION
 	public boolean okForAddMany(int player, int territory, int number){
-		if (this.battle_status[player] != STATUS_ACTIVE_FOR_DISTRIBUTION){
+		if (this.battle_status[player] != STATUS_ACTIVE_FOR_DISTRIBUTION && IntStream.of(this.battle_status).sum() < 10){
 			return false;
 		}
 		
@@ -530,6 +543,7 @@ public class State {
 		if (this.available_soldiers_to_add[player] < number){
 			return false;
 		}
+		
 		return true;
 	}
 	
@@ -539,12 +553,24 @@ public class State {
 			this.available_soldiers_to_add[player] -= number;
 		}		
 		
-		if (this.available_soldiers_to_add[player] == 0)
-			goToNextStep();
+		if (this.available_soldiers_to_add[player] == 0){
+			if (IntStream.of(this.battle_status).sum() >= 10){
+				this.battle_status[player] = 0;
+				if (IntStream.of(this.battle_status).sum() == 0){
+					this.battle_status[0] = 1;
+				}
+			}
+			
+			else {
+				if (IntStream.of(this.battle_status).sum() < 10)
+					goToNextStep();
+			}
+		}
+			
 	}
 	
 	//THIS IS FOR ATTACKS
-	public boolean attack(int player, int territory_from, int territory_to){
+	public void attack(int player, int territory_from, int territory_to){
 		/* Constraints:
 		 * 	-	Status allows.
 		 * 	-	territory_from belongs to player
@@ -559,56 +585,83 @@ public class State {
 		 *  -	If the territory is occupied, move soldiers from territory_from to territory_to
 		 */
 		
+		
 		System.out.println("Player " + player + " is attacking from " + TERRITORIES[territory_from] + " to " + TERRITORIES[territory_to] + ".");
 		
 		if (this.battle_status[player] != STATUS_ACTIVE_FOR_ATTACK){
 			System.out.println("Error: Status inactive");
-			return false;
+			unsave();
+			return;
+		}
+		
+		if (this.attacking){
+			System.out.println("Error: Attacking");
+			unsave();
+			return;
 		}
 		
 		if (this.territories_by_player[territory_from] != player){
 			System.out.println("Error: Territory_from is not his territory.");
-			return false;
+			unsave();
+			return;
 		}		
 		
 		if (!this.neighbors.get(territory_from).contains(territory_to)){
 			System.out.println("Error: These 2 territories are not neighbors.");
-			return false;
+			unsave();
+			return;
 		}
 		
 		if (this.territories_by_player[territory_to] == player){
 			System.out.println("Error: Territory_to is already his territory.");
-			return false;
+			unsave();
+			return;
 		}
 
 		if (this.nb_soldiers_on_territory[territory_from] < 2){
 			System.out.println("Error: Insuffisant force");
-			return false;
+			unsave();
+			return;
+		}
+
+		
+		this.attacking = true;
+		this.attack_dices = generateRandomNumber(Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1));
+	
+	}
+	
+	public void defend(int player, int territory_from, int territory_to){
+		if (!this.attacking){
+			System.out.println("Error: Status inactive");
+			return;
 		}
 		
-		int[] attack_dice = generateRandomNumber(Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1));
-		int[] defend_dice = generateRandomNumber(Math.min(2, this.nb_soldiers_on_territory[territory_to]));
+		if (this.territories_by_player[territory_to] != player){
+			System.out.println("Error: Status inactive");
+			return;
+		}
 		
-		int[] res_of_attack = compare(attack_dice, defend_dice);
+		this.defend_dices = generateRandomNumber(Math.min(2, this.nb_soldiers_on_territory[territory_to]));
+		
+		int[] res_of_attack = compare(attack_dices, defend_dices);
 		
 		this.nb_soldiers_on_territory[territory_from] += res_of_attack[0];
 		this.nb_soldiers_on_territory[territory_to] += res_of_attack[1];
 		
 		if (this.nb_soldiers_on_territory[territory_to] == 0){
 			System.out.println(TERRITORIES[territory_to] + " lost, no under control of player " + player);
-			this.territories_by_player[territory_to] = player;
+			this.territories_by_player[territory_to] = this.territories_by_player[territory_from];
 			this.nb_soldiers_on_territory[territory_to] += Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1);
 			this.nb_soldiers_on_territory[territory_from] -= Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1);
 		}
 		
-		return true;
+		this.attacking = false;
+		this.unsave();
 	}
 	
-	public void keepOnAttacking(int player, int territory_from, int territory_to){
-		boolean stop = attack(player, territory_from, territory_to);
-		while (stop){
-			stop = attack(player, territory_from, territory_to);
-		}
+	public void resetDices(){
+		this.attack_dices = new int[]{0, 0, 0};
+		this.defend_dices = new int[]{0, 0};
 	}
 	
 	public int[] generateRandomNumber(int number){
@@ -778,6 +831,14 @@ public class State {
 		}
 		
 		return false;
+	}
+	
+	public void save(){
+		this.save = true;
+	}
+	
+	public void unsave(){
+		this.save = false;
 	}
 	
 	public ArrayList<Integer> winner(){
