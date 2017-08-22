@@ -56,7 +56,7 @@ function brighten(player, i){
 	
 	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION || battle_status == STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
 		var number = document.getElementById("number").value;
-		if (number > 0 && document.getElementById("area" + i)!= null){
+		if (number > 0){
 			document.getElementById("area" + i).href = "Risk?action=ADD_MANY&player=" + player + "&territory=" + TERRITORIES[i] + "&number=" + number;
 		}
 		return;
@@ -64,17 +64,14 @@ function brighten(player, i){
 	
 	if (battle_status == STATUS_ACTIVE_FOR_ATTACK){
 		if (document.getElementById("chosen_territory").value != ""){
-			if (document.getElementById("attacking").value == 1 ){
-				if (document.getElementById("area" + i)!= null)
+			if (document.getElementById("attacking").value == 1){
 				document.getElementById("area" + i).href = "Risk?action=DEFEND&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
 			}
 			else{
-				if (document.getElementById("area" + i)!= null)
-					document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
+				document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
 			}
 		} else {
-			if (document.getElementById("area" + i)!= null)
-				document.getElementById("area" + i).href = "Risk?action=SAVE&player=" + player + "&territory_from=" + TERRITORIES[i];
+			document.getElementById("area" + i).href = "Risk?action=SAVE&player=" + player + "&territory_from=" + TERRITORIES[i];
 		}
 		return;
 	}
@@ -82,11 +79,10 @@ function brighten(player, i){
 	if (battle_status == STATUS_ACTIVE_FOR_FORTIFICATION){
 		if (document.getElementById("chosen_territory").value != ""){
 			var number = document.getElementById("number").value;
-			if (number > 0 && document.getElementById("area" + i)!= null){
+			if (number > 0){
 				document.getElementById("area" + i).href = "Risk?action=FORTIFY&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i] + "&number=" + number;
 			}
 		} else {
-			if (document.getElementById("area" + i)!= null)
 			document.getElementById("area" + i).href = "Risk?action=SAVE&player=" + player + "&territory_from=" + TERRITORIES[i];
 		}
 		return;
@@ -120,33 +116,30 @@ window.onload = function(){
 		var x1 = Math.floor(ORIGINAL_COORDINATES[i][2] / original_width * canvas_width);
 		var y1 = Math.floor(ORIGINAL_COORDINATES[i][3] / original_height * canvas_height);
 	
-		if (document.getElementById("area" + i) != null){
-			document.getElementById("area" + i).setAttribute("coords", x0 + "," + y0 + "," + x1 + "," + y1);
-		}
+		document.getElementById("area" + i).setAttribute("coords", x0 + "," + y0 + "," + x1 + "," + y1);
+		document.getElementById("area" + i).setAttribute("alt", "alt");
+		
 		
 		var centerX = (x0 + x1) / 2 + 5;
 	    var centerY = (y0 + y1) / 2 + 5;
 	    var radius = 10;
 
 	    context.beginPath();
-	    context.arc(centerX, centerY, Math.min(radius + parseInt(nb_soldiers_on_territory[i])*1 , 20), 0, 2 * Math.PI, false);
+	    context.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
 	    context.fillStyle = COLOR[parseInt(territories_by_player[i])];
 	    context.fill();
 	    context.lineWidth = 0.25;
 	    context.strokeStyle = COLOR[parseInt(territories_by_player[i])];
 	    context.stroke();
 
-	    context.font = Math.min(Math.floor(8 + 0.6*parseInt(nb_soldiers_on_territory[i])), 20) + 'pt Calibri';
+	    context.font = '8pt Calibri';
 	    context.fillStyle = 'white';
 	    context.textAlign = 'center';
-	    context.textBaseline = "middle"; 
-	    context.fillText(parseInt(nb_soldiers_on_territory[i]), centerX, centerY);
+	    context.fillText(parseInt(nb_soldiers_on_territory[i]), centerX, centerY + 3);
 	    
-	    if (document.getElementById("battle_status") != null){
-		    battle_status = document.getElementById("battle_status").value;
-		    if (battle_status == STATUS_ACTIVE_FOR_FORTIFICATION && document.getElementById("chosen_territory").value == ""){
-		    	document.getElementById("number").style.display='none';
-		    }
+	    battle_status = document.getElementById("battle_status").value;
+	    if (battle_status == STATUS_ACTIVE_FOR_FORTIFICATION && document.getElementById("chosen_territory").value == ""){
+	    	document.getElementById("number").style.display='none';
 	    }
 	}
 }
@@ -204,14 +197,14 @@ function notify(){
 	}
 }
 
-function updowncard(active, player, card){
+function updowncard(player, card){
 	var src = document.getElementById("card" + card).src;
 	var battle_status = document.getElementById("battle_status").value;
 	if (src.endsWith('Img/CA.png')){
 		document.getElementById("card" + card).src = 'Img/C' + card + '.png'
 	}
 	
-	if (active == 1 && battle_status == STATUS_ACTIVE_FOR_TUNE_IN){
+	if (battle_status == STATUS_ACTIVE_FOR_TUNE_IN){
 		var card_1 = document.getElementById("tune_in_card_1").value;
 		var card_2 = document.getElementById("tune_in_card_2").value;
 		var card_3 = document.getElementById("tune_in_card_3").value;		

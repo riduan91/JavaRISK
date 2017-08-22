@@ -131,6 +131,8 @@ public class State {
 	
 	int next_tune_in_index;
 	boolean save;
+	int attacking_territory_from;
+	int attacking_territory_to;
 	
 	public State(int nb_players){
 		//Read territories name
@@ -184,6 +186,9 @@ public class State {
 		
 		for (int player=0; player < this.nb_players; player++){
 			this.mission_of_player[player] = local_missions.get(player);
+			if (this.mission_of_player[player] == 7 + player){
+				this.mission_of_player[player] = local_missions.get(5 + player);
+			}
 		}
 		
 		//Set turn_in_index
@@ -218,6 +223,9 @@ public class State {
 		
 		//Unsave
 		this.save = false;
+		
+    	attacking_territory_from = -1;
+    	attacking_territory_to = -1;
 	}
 	
 	public ArrayList<Integer> getTerritoriesOccupedBy(int player){
@@ -591,35 +599,44 @@ public class State {
 		if (this.battle_status[player] != STATUS_ACTIVE_FOR_ATTACK){
 			System.out.println("Error: Status inactive");
 			unsave();
+			attacking_territory_from = -1;
+			attacking_territory_to = -1;
 			return;
 		}
 		
 		if (this.attacking){
 			System.out.println("Error: Attacking");
-			unsave();
 			return;
 		}
 		
 		if (this.territories_by_player[territory_from] != player){
 			System.out.println("Error: Territory_from is not his territory.");
+			attacking_territory_from = -1;
+			attacking_territory_to = -1;
 			unsave();
 			return;
 		}		
 		
 		if (!this.neighbors.get(territory_from).contains(territory_to)){
 			System.out.println("Error: These 2 territories are not neighbors.");
+			attacking_territory_from = -1;
+			attacking_territory_to = -1;
 			unsave();
 			return;
 		}
 		
 		if (this.territories_by_player[territory_to] == player){
 			System.out.println("Error: Territory_to is already his territory.");
+			attacking_territory_from = -1;
+			attacking_territory_to = -1;
 			unsave();
 			return;
 		}
 
 		if (this.nb_soldiers_on_territory[territory_from] < 2){
 			System.out.println("Error: Insuffisant force");
+			attacking_territory_from = -1;
+			attacking_territory_to = -1;
 			unsave();
 			return;
 		}
@@ -657,6 +674,8 @@ public class State {
 		
 		this.attacking = false;
 		this.unsave();
+		this.attacking_territory_from = -1;
+		this.attacking_territory_to = -1;
 	}
 	
 	public void resetDices(){
@@ -741,6 +760,11 @@ public class State {
 		this.nb_soldiers_on_territory[territory_from] -= nb;
 		this.nb_soldiers_on_territory[territory_to] += nb;
 		
+		this.attacking_territory_from = -1;
+		this.attacking_territory_to = -1;
+		
+		this.unsave();
+		
 		//System.out.println("Action completed.");
 	}
 	
@@ -796,14 +820,13 @@ public class State {
 			return true;
 		
 		if (this.mission_of_player[player] == 5 && this.getTerritoriesOccupedBy(player).size() >= 18){
-			boolean res = true;
+			int count = 0;
 			for (Integer i: this.getTerritoriesOccupedBy(player)){
-				if (this.nb_soldiers_on_territory[i] < 2){
-					res = false;
-					break;
+				if (this.nb_soldiers_on_territory[i] >= 2){
+					count += 1;
 				}
 			}
-			if (res)
+			if (count >= 18)
 				return true;
 		}
 		
