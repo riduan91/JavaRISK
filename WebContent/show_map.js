@@ -56,7 +56,7 @@ function brighten(player, i){
 	
 	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION || battle_status == STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
 		var number = document.getElementById("number").value;
-		if (number > 0 && document.getElementById("area" + i)!= null){
+		if (document.getElementById("area" + i)!= null){
 			document.getElementById("area" + i).href = "Risk?action=ADD_MANY&player=" + player + "&territory=" + TERRITORIES[i] + "&number=" + number;
 		}
 		return;
@@ -145,7 +145,8 @@ window.onload = function(){
 	    if (document.getElementById("battle_status") != null){
 		    battle_status = document.getElementById("battle_status").value;
 		    if (battle_status == STATUS_ACTIVE_FOR_FORTIFICATION && document.getElementById("chosen_territory").value == ""){
-		    	document.getElementById("number").style.display='none';
+		    	if (document.getElementById("number") != null)
+		    		document.getElementById("number").style.display='none';
 		    }
 	    }
 	}

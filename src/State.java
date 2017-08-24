@@ -552,6 +552,14 @@ public class State {
 			return false;
 		}
 		
+		if (this.battle_status[player] == STATUS_ACTIVE_FOR_DISTRIBUTION && number <= 0){
+			return false;
+		}
+		
+		if (IntStream.of(this.battle_status).sum() >= 10 && this.nb_soldiers_on_territory[territory] + number < 1){
+			return false;
+		}
+		
 		return true;
 	}
 	
@@ -842,7 +850,7 @@ public class State {
 	}
 	
 	public boolean all_round_finished(){
-		return this.next_tune_in_index == 15;
+		return this.next_tune_in_index == 13;
 	}
 	
 	public boolean finished(){
