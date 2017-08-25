@@ -270,14 +270,11 @@ public class Risk extends HttpServlet {
     	out.println("<img class='card' id='mission' src='Img/MA.png' style='left:" + X[0] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
     	
     	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
-    		Random random = new Random();
-    		int error = Math.min(-2 + random.nextInt(5) + state.last_card_order, 41);
-    		for (int i = 0; i < state.NB_TERRITORIES; ++i){
-    			if (i == error){
-    				
-    				out.println("<img id='last_card' src='Img/W.png' style='left:" + (X[1] + i) + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
+    		for (int i = state.NB_TERRITORIES - 1; i >= 0; --i){
+    			if (i == state.last_card_order || i == (state.last_card_order - 1)){ 				
+    				out.println("<img id='last_card' src='Img/CA.png' border='1' style='left:" + (X[1] + i*0.5) + "px; top:" + Y +"px; width:138px; height:216px; position:absolute; border-color:red;'>");
     			} else
-    				out.println("<img id='last_card' src='Img/CA.png' border='1' style='left:" + (X[1] + i) + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
+    				out.println("<img id='last_card' src='Img/CA.png' style='left:" + (X[1] + i*0.5) + "px; top:" + Y +"px; width:140px; height:220px; position:absolute;'>");
     		}
     	} else    	
     		out.println("<img class='card' id='last_card' src='Img/C" + state.last_card + ".png' style='left:" + X[1] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
@@ -464,6 +461,8 @@ public class Risk extends HttpServlet {
 		printp(out, "Attacking from: " + state.attacking_territory_from);
 		printp(out, "Attacking to: " + state.attacking_territory_to);
 		printp(out, "Shuffle: " + Arrays.toString(state.shuffled_cards.toArray()));
+		printp(out, "EP: " + state.last_card_order);
+		printp(out, "P: " + state.last_card);
 		
 		printFooter(out);
     	
