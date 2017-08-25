@@ -49,6 +49,8 @@ public class State {
 									0, 1, 2, 0, 1, 2 
 								};
 	
+	final int[] NB_INITIAL_SOLDIERS = {0, 0, 40, 35, 30, 26};
+	
 	final String[] TERRITORIES = new String[]{ 
 			"ALASKA", "NORTH-WEST TERRITORY", "ONTARIO", "EASTERN CANADA", "GREENLAND", "ALBERTA",
 			"WESTERN UNITED STATES", "EASTERN UNITED STATES", "CENTRAL AMERICA",  "VENEZUELA", "BRAZIL", "PERU",
@@ -134,6 +136,10 @@ public class State {
 	int attacking_territory_from;
 	int attacking_territory_to;
 	
+	int last_card_order;
+	int last_card;
+	boolean last_card_taken;
+	
 	public State(int nb_players){
 		//Read territories name
 		this.territory_index = new HashMap<String, Integer>();
@@ -202,7 +208,7 @@ public class State {
 		//Soldiers to add
 		this.available_soldiers_to_add = new int[this.nb_players];
 		for (int player = 0; player < this.nb_players; player++){
-			this.available_soldiers_to_add[player] = 21;
+			this.available_soldiers_to_add[player] = NB_INITIAL_SOLDIERS[this.nb_players] - this.getTerritoriesOccupedBy(player).size();
 			//this.available_soldiers_to_add[player] = 1;
 		}
 		
@@ -224,8 +230,14 @@ public class State {
 		//Unsave
 		this.save = false;
 		
-    	attacking_territory_from = -1;
-    	attacking_territory_to = -1;
+    	this.attacking_territory_from = -1;
+    	this.attacking_territory_to = -1;
+    	
+    	//Last_card
+    	Random Random = new Random();
+    	this.last_card_order = 25 + Random.nextInt(17);
+    	this.last_card = this.shuffled_cards.get(this.last_card_order);
+    	this.last_card_taken = false;
 	}
 	
 	public ArrayList<Integer> getTerritoriesOccupedBy(int player){
@@ -269,8 +281,16 @@ public class State {
 		return description;
 	}
 	
+	public boolean isDead(int player){
+		return this.getTerritoriesOccupedBy(player).size() == 0;
+	}
+	
 	public int getNextPlayer(int player){
-		return (player + 1) % this.nb_players;
+		int i = 1;
+		while (isDead((player + i) % this.nb_players)){
+			i++;
+		}
+		return (player + i) % this.nb_players;
 	}
 	
 	public int currentActivePlayer(){
@@ -300,7 +320,7 @@ public class State {
 			System.out.println("Player " + current_active_player + " goes to step " + this.battle_status[current_active_player]);
 		}
 		
-		//If fortified, next player
+		//If fortified, next player. If tune in and player lost, go to next player until get an alive player
 		else if (this.battle_status[current_active_player] == STATUS_ACTIVE_FOR_FORTIFICATION){
 			this.battle_status[getNextPlayer(current_active_player)] = 1;
 			this.battle_status[current_active_player] = 0;
@@ -586,7 +606,7 @@ public class State {
 	}
 	
 	//THIS IS FOR ATTACKS
-	public void attack(int player, int territory_from, int territory_to){
+	public void attack(int player, int territory_from, int territory_to, int number){
 		/* Constraints:
 		 * 	-	Status allows.
 		 * 	-	territory_from belongs to player
@@ -641,17 +661,21 @@ public class State {
 			return;
 		}
 
-		if (this.nb_soldiers_on_territory[territory_from] < 2){
+		if (this.nb_soldiers_on_territory[territory_from] <= number){
 			System.out.println("Error: Insuffisant force");
 			attacking_territory_from = -1;
 			attacking_territory_to = -1;
 			unsave();
 			return;
 		}
-
 		
 		this.attacking = true;
-		this.attack_dices = generateRandomNumber(Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1));
+		//this.attack_dices = generateRandomNumber(Math.min(3, this.nb_soldiers_on_territory[territory_from] - 1));
+		this.attack_dices = generateRandomNumber(number);
+		
+		if (this.attack_dices[0] == 1){
+			defend(this.territories_by_player[territory_to], territory_from, territory_to);
+		}
 	
 	}
 	
@@ -789,6 +813,10 @@ public class State {
 	
 	public void takeACard(int player){
 		Integer random_card = this.shuffled_cards.remove(0);
+		if (random_card == this.last_card){
+			this.last_card_taken = true;
+		}
+		
 		this.cards_held_by_player.get(player).add(random_card);
 		System.out.println("Player " + player + " has received card " + random_card);
 	}
@@ -849,12 +877,8 @@ public class State {
 		return false;
 	}
 	
-	public boolean all_round_finished(){
-		return this.next_tune_in_index == 13;
-	}
-	
 	public boolean finished(){
-		if (all_round_finished()) 
+		if (this.last_card_taken)
 			return true;
 		for (int player = 0; player < this.nb_players; player++){
 			if (missionCompleted(player))

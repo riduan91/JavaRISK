@@ -50,9 +50,6 @@ function brighten(player, i){
 	battle_status = document.getElementById("battle_status").value;
 
 	document.getElementById("territory" + i).style.opacity = 0.5;
-	for (var j = 0; j < NEIGHBORS[i].length; j++){
-		document.getElementById("territory" + NEIGHBORS[i][j]).style.opacity = 0.5;
-	}
 	
 	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION || battle_status == STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
 		var number = document.getElementById("number").value;
@@ -64,13 +61,13 @@ function brighten(player, i){
 	
 	if (battle_status == STATUS_ACTIVE_FOR_ATTACK){
 		if (document.getElementById("chosen_territory").value != ""){
-			if (document.getElementById("attacking").value == 1 ){
+			if (document.getElementById("attacking").value == 1){
 				if (document.getElementById("area" + i)!= null)
 				document.getElementById("area" + i).href = "Risk?action=DEFEND&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
 			}
 			else{
-				if (document.getElementById("area" + i)!= null)
-					document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i];
+				if (document.getElementById("area" + i)!= null && document.getElementById("number_range") != null)
+					document.getElementById("area" + i).href = "Risk?action=ATTACK&player=" + player + "&territory_from=" + TERRITORIES[document.getElementById("chosen_territory").value] + "&territory_to=" + TERRITORIES[i] + "&number=" + document.getElementById("number_range").value;
 			}
 		} else {
 			if (document.getElementById("area" + i)!= null)
@@ -95,10 +92,6 @@ function brighten(player, i){
 
 function darken(i){
 	document.getElementById("territory" + i).style.opacity = 1;
-	
-	for (var j = 0; j < NEIGHBORS[i].length; j++){
-		document.getElementById("territory" + NEIGHBORS[i][j]).style.opacity = 1;
-	}
 	
 	document.getElementById("area" + i).href = "";
 	
@@ -194,13 +187,14 @@ function click(i, player){
 
 function notify(){
 	var battle_status = document.getElementById("battle_status").value;
-	var number = document.getElementById("number").value;
 	
 	if (battle_status == STATUS_ACTIVE_FOR_DISTRIBUTION){
+		var number = document.getElementById("number").value;
 		document.getElementById("notification").innerHTML  = "Click on a territory you have to move " + number + " soldiers to."
 	}
 	
 	if (battle_status == STATUS_ACTIVE_FOR_FORTIFICATION){
+		var number = document.getElementById("number").value;
 		document.getElementById("notification").innerHTML  = "Click on a territory you have to move " + number + " soldiers to."
 	}
 }
@@ -266,4 +260,8 @@ function updownmission(mission){
 	} else {
 		document.getElementById("mission").src = 'Img/MA.png';
 	}
+}
+
+function changerange(){
+	document.getElementById("number_sign").innerHTML = document.getElementById("number_range").value
 }

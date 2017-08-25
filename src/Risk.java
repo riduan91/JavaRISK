@@ -1,6 +1,7 @@
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.Arrays;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 import javax.servlet.ServletException;
@@ -18,24 +19,42 @@ public class Risk extends HttpServlet {
 	private static final long serialVersionUID = 1L;
 	
 	State state; 
-	boolean save;
 	String[] names;
 
+	
     public Risk() {
+    	//Initialization of Servlet
         super();
     	state = new State(3);
-    	names = new String[]{"PLAYER 1", "PLAYER 2", "PLAYER 3"};
+    	names = new String[]{"PLAYER1", "PLAYER2", "PLAYER3"};
     }
     
     void reset(String names){
     	String[] new_names = names.split("-");
     	state = new State(new_names.length);
     	this.names = new_names;
-    	System.out.println(this.names.length);
     }
     
     void display(HttpServletRequest request, HttpServletResponse response, int player, String action) throws ServletException, IOException {
-
+    	/*
+    	 * There are 3 zones to display on the screen:
+    	 * 1.	Top-left: The battle 
+    	 * 		+	1.1 World map -> printMap (visible to every player)
+    	 * 		+	1.2 How regiments are distributed (visible to every player but customized by private player) -> printPlayerMap
+    	 * 
+    	 * 2.	Bottom-left:
+    	 * 		+	2.1 Cards received by players (private) -> printCard
+    	 * 		+	2.2 Winner information (only when game finished) (visible to every player) -> checkFinish
+    	 * 
+    	 * 3. 	Right:
+    	 * 		+ 	3.1 Notifications (customized for player) -> printNotification
+    	 * 		+ 	3.1.1 Allow refresh (for every player) and undo (for private player) -> printUpdateZone
+    	 * 		+	3.2	Next turn in information (visible for every player)  -> printNextTuneInInformation
+    	 * 		+	3.3	Dices (visible for every player) -> printDices
+    	 * 		+	3.4	Mission (private) -> printMission
+    	 * 	
+    	 * 4.	Private data (to communicate with javascript)
+    	 */
     	response.setContentType("text/html");
     	response.setCharacterEncoding("utf-8");
     	
@@ -75,6 +94,7 @@ public class Risk extends HttpServlet {
     }
     
     void printRedirectionHeader(PrintWriter out, int player){
+    	//If action is not VIEW, redirect to action VIEW to avoid unexpected repeated action with automatic refresh
     	String title = "PLAY RISK ONLINE";
 		
 		out.println("<!DOCTYPE HTML>");
@@ -86,6 +106,7 @@ public class Risk extends HttpServlet {
     }
     
     void printDumpHeader(PrintWriter out){
+    	//If action is RESET, return a blank page
     	String title = "PLAY RISK ONLINE";
 		
 		out.println("<!DOCTYPE HTML>");
@@ -97,6 +118,7 @@ public class Risk extends HttpServlet {
     }
     
     void printHeader(PrintWriter out){
+    	//If action is VIEW, print normal header
     	String title = "PLAY RISK ONLINE";
 		
 		out.println("<!DOCTYPE HTML>");
@@ -104,30 +126,54 @@ public class Risk extends HttpServlet {
 		out.println("<head><title>" + title + "</title><meta charset=\"UTF-8\" />");
 		out.println("<script type=\"text/javascript\" src=\"show_map.js\"></script>");
 		out.println("<script type=\"text/javascript\" src=\"live.js\"></script>");
-		
 		out.println("</head>");
 		out.println("<body>");
     }
     
     void printMap(PrintWriter out){
-		out.println("<img src='Img/W.png' style='left:825px; top:10px; width:270px; height:710px; opacity:0.1; position:absolute'>");
-		out.println("<img src='Img/U.png' style='left:10px; top:460px; width:800px; height:260px; opacity:0.1; position:absolute'>");
+    	//The right green background
+		out.println("<img src='Img/W.png' style='left:825px; top:10px; width:350px; height:740px; opacity:0.1; position:absolute'>");
+		
+		//The bottom-left violet background
+		out.println("<img src='Img/U.png' style='left:10px; top:460px; width:800px; height:290px; opacity:0.1; position:absolute'>");
+		
+		//The world map background
     	out.println("<img id='territoryA' src='Img/A.png' style='left:10px; top:10px; width:800px; height:440px; opacity:1; position:absolute'>");
 		
+    	//Then each territory, highlight when being ATTACKED or being CHOSEN (to move regiments from or to attack from)
 		for (int i = 0; i < state.NB_TERRITORIES; ++i){
-			out.println("<img id='territory" + i + "' src='Img/" + i + ".png' style='left:10px; top:10px; width:800px; height:440px; opacity:1.0; position:absolute'>");
+			if (state.attacking_territory_from == i || state.attacking_territory_to == i)
+				out.println("<img class='territory' id='territory" + i + "' src='Img/" + i + ".png' style='left:10px; top:10px; width:800px; height:440px; opacity:0.5; position:absolute'>");
+			else
+				out.println("<img class='territory' id='territory" + i + "' src='Img/" + i + ".png' style='left:10px; top:10px; width:800px; height:440px; opacity:1.0; position:absolute'>");
 		}
-		
-		out.println("<canvas id='myCanvas' width='800' height='440' style='left:10px; top:10px; position:absolute; z-index:99; opacity: 0.8'></canvas>");
-		
-		out.println("<img src='Img/A.png' style='left:10px; top:10px; width:800px; height:440px; opacity:0; position:absolute; z-index:100;' usemap='#worldmap'>");
     }
     
     void printPlayerMap(PrintWriter out, HttpServletRequest request, int player){
     	int active_player = state.currentActivePlayer();
+		
+		//Use canvas for interaction
+		out.println("<canvas id='myCanvas' width='800' height='440' style='left:10px; top:10px; position:absolute; z-index:99; opacity: 0.8'></canvas>");
+		
+		//Repeat the map background to allow clicking
+		out.println("<img src='Img/A.png' style='left:10px; top:10px; width:800px; height:440px; opacity:0; position:absolute; z-index:100;' usemap='#worldmap'>");
+    	
 		out.println("<map id='worldmap' name='worldmap'>");
 		
 		for (int i = 0; i < state.NB_TERRITORIES; ++i){
+			/*
+			 * When a territory is clickable?
+			 * 	1.	When another territory was chosen:
+			 * 		1.1 If it was chosen for attacking from, then all its neighbors belonging to other players will be clickable for the attacker
+			 * 		1.2	If it was chosen to move regiments from, then all its connected territories belonging to the attacker will be clickable for the attacker
+			 * 	2.	While attacking
+			 * 		The attacked territory will be clickable for the defender
+			 * 	3.	In first distribution
+			 * 		The territories belonging to a player will be clickable for that player
+			 *  4.	If a player is able to attack somewhere or to move regiments from
+			 *  	The territories belonging to a player will be clickable for that player
+			 */
+			
 			if (state.save && !state.attacking){
 				if (state.attacking_territory_from >= 0 && state.neighbors.get(state.attacking_territory_from).contains(i) && state.territories_by_player[i] != player && state.battle_status[player] == state.STATUS_ACTIVE_FOR_ATTACK)
 					out.println("<area id='area" + i + "' shape='rect' onmouseover='brighten(" + player + ", " + i + ")' onmouseout='darken(" + i +")';>");		
@@ -151,6 +197,7 @@ public class Risk extends HttpServlet {
     }
     
     void printPrivateData(PrintWriter out, HttpServletRequest request){
+    	// Data to communicate with javascript
     	out.println("<input type='text' id='territories_by_player' value='" + Arrays.toString(state.territories_by_player) + "'style='display:none;'></input>");
 		out.println("<input type='text' id='nb_soldiers_on_territory' value='" + Arrays.toString(state.nb_soldiers_on_territory) + "'style='display:none;'></input>");
 		if (state.attacking_territory_from >= 0){
@@ -162,32 +209,38 @@ public class Risk extends HttpServlet {
     }
     
     void checkFinish(PrintWriter out){
-    	out.println("<h1 style='color:green; left:10px; top:480px; width:800px; position:absolute'");
+    	// When finish, print the player whose mission has been accomplished and his mission card
+    	out.println("<form style='color:green; left:10px; top:480px; width:800px; position:absolute'>");
     	for (int player=0; player < state.nb_players; ++player){
         	if (state.missionCompleted(player)){
-        		out.println("<p>" + names[player] + " has completed his mission.</p>");
-        		out.println("<img id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:640px top:480px width:140px; height:220px; position:absolute'>");
+        		out.println("<h1>" + names[player] + " has accomplished his mission!</h1>");
+        		out.println("<img class='card' id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:640px; top:35px; width:140px; height:220px; position:absolute'>");
         		return;
         	}
     	}
     	
-    	out.print("<p>Player ");
+    	//Otherwise print the players with the most territories
+    	out.print("<h1>Player ");
     	for (Integer player: state.winner()){
     		out.print(player + " ");
     	}
-    	out.println(" win(s) with the most territories.");
+    	out.println(" win(s) with the most territories.</h1>");
+    	out.println("</form>");
     }
     
     void printCards(PrintWriter out, int player){
     	if (state.finished())
     		return;
     	
+    	// Print cards received by a player in order, with ability to turn back/front the card and possibility to turn in cards
+    	out.println("<h3 style='color:green; left:10px; top:460px; position:absolute'>Your cards</h3>");
+    	
     	int active_player = state.currentActivePlayer(); 
     	int index = 0;
     	int[] X = {20, 180, 340, 500, 660};
-    	int[] Y = {480, 480, 480, 480, 480};
+    	int Y = 510;
     	for (Integer card: state.cards_held_by_player.get(player)){
-    		out.println("<img id='card" + card + "' src='Img/CA.png' style='left:" + X[index] + "px; top:" + Y[index++] +"px; width:140px; height:220px; position:absolute' onclick='updowncard(" + (player==active_player?1:0) + ", " + player + ", " + card + ");'>");
+    		out.println("<img class='card' id='card" + card + "' src='Img/CA.png' style='left:" + X[index++] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updowncard(" + (player==active_player?1:0) + ", " + player + ", " + card + ");'>");
     	}
     	
     	if (state.battle_status[player] == state.STATUS_ACTIVE_FOR_TUNE_IN){
@@ -201,22 +254,53 @@ public class Risk extends HttpServlet {
     }
     
     void printMission(PrintWriter out, int player){
-    	int X = 890;
-    	int Y = 480;
+    	// Print mission and the stop card
+    	// In the first distribution, replace the stop card by the whole deck
+    	
+    	int[] X = {850, 1010};
+    	int Y = 510;
+    	
+    	out.println("<h3 style='color:green; left:850px; top:460px; position:absolute'>Your mission</h3>");
+    	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION)
+    		out.println("<h3 style='color:green; left:1010px; top:460px; position:absolute'>Position of the stop card</h3>");
+    	else
+    		out.println("<h3 style='color:green; left:1010px; top:460px; position:absolute'>Stop card</h3>");
+    	
     	int mission = state.mission_of_player[player];
-    	out.println("<img id='mission' src='Img/MA.png' style='left:" + X + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
+    	out.println("<img class='card' id='mission' src='Img/MA.png' style='left:" + X[0] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
+    	
+    	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
+    		Random random = new Random();
+    		int error = Math.min(-2 + random.nextInt(5) + state.last_card_order, 41);
+    		for (int i = 0; i < state.NB_TERRITORIES; ++i){
+    			if (i == error){
+    				
+    				out.println("<img id='last_card' src='Img/W.png' style='left:" + (X[1] + i) + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
+    			} else
+    				out.println("<img id='last_card' src='Img/CA.png' border='1' style='left:" + (X[1] + i) + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
+    		}
+    	} else    	
+    		out.println("<img class='card' id='last_card' src='Img/C" + state.last_card + ".png' style='left:" + X[1] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute'>");
     }
     
     void printDices(PrintWriter out, HttpServletRequest request){
+    	// Print dices
+    	
     	int[] X = {850, 920, 990};
     	int[] Y = {330, 400};
     	
     	for (int dice = 0; dice < state.attack_dices.length; dice++){
-    		out.println("<img id='A" + dice + "' src='Img/A" + state.attack_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[0] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    		if (state.attacking)
+    			out.println("<img class='adice' id='A" + dice + "' src='Img/A" + state.attack_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[0] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    		else
+    			out.println("<img id='A" + dice + "' src='Img/A" + state.attack_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[0] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
     	}
     	
     	for (int dice = 0; dice < state.defend_dices.length; dice++){
-    		out.println("<img id='D" + dice + "' src='Img/D" + state.defend_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[1] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    		if (state.defend_dices[dice] > 0)
+    			out.println("<img class='ddice' id='D" + dice + "' src='Img/D" + state.defend_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[1] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
+    		else
+    			out.println("<img id='D" + dice + "' src='Img/D" + state.defend_dices[dice] + ".png' style='left:" + X[dice] + "px; top:" + Y[1] +"px; width:50px; height:50px; position:absolute; opacity:0.7'>");
     	}
     	
     	out.println("<input type='number' id='attacking' value='" + (state.attacking?1:0) + "' style='display:none;'></input>");
@@ -224,8 +308,12 @@ public class Risk extends HttpServlet {
     }
     
     void printNotification(PrintWriter out, int player){
+    	// Notification
+    	
     	int active_player = state.currentActivePlayer(); 
 		out.println("<form style='left:850px; top:10px; position:absolute'>");
+		
+		// Handle TURN IN cáe
 		if (player == active_player && state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_TUNE_IN && !state.ableToTurnIn(active_player)){
 			out.println("<input type='text' id='battle_status' value='2' style='display:none;'>");
 		}
@@ -239,19 +327,22 @@ public class Risk extends HttpServlet {
 		else
 			out.println("<h5>Wait for the others to finish distribution.</h5>");
 		
+		// FIRST DISTRIBUTION
     	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
     		out.println("<h3>Initial distribution.</h3>");
     		out.println("<input type='text' id='battle_status' value='10' style='display:none;'>");
     		out.println("<p>Number of regiments left: <strong>" + state.available_soldiers_to_add[player] + "</strong></p>");
-    		out.println("<p>Choose the number to distribute: <br/><input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
+    		out.println("<p>Distribute:<input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
     	}
     	
+    	
+    	// TURN IN
     	else if (player == active_player && state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_TUNE_IN){
     		if (!state.ableToTurnIn(active_player)){
     			state.finishTuneIn(active_player);
     			out.println("<input type='text' id='battle_status' value='2' style='display:none;'>");
         		out.println("<p>Number of regiments left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-        		out.println("<p>Choose the number to distribute: <br/><input id='number' type='number' size='10' value=0 onchange='notify(" + state.battle_status[active_player] +")'></p>");
+        		out.println("<p>Distribute:<input id='number' type='number' size='10' value=0 onchange='notify(" + state.battle_status[active_player] +")'></p>");
     		} else {
         		out.println("<input type='text' id='battle_status' value='1' style='display:none;'></input>");
         		if (state.cards_held_by_player.get(player).size() < 5)
@@ -266,13 +357,15 @@ public class Risk extends HttpServlet {
     		}
     	}
     	
+    	// DISTRIBUTION
     	else if (player == active_player && state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_DISTRIBUTION){
     		out.println("<h3>You have bonus regiments.</h3>");
     		out.println("<input type='text' id='battle_status' value='2' style='display:none;'>");
     		out.println("<p>Number of regiments left: <strong>" + state.available_soldiers_to_add[active_player] + "</strong></p>");
-    		out.println("<p>Choose the number to distribute: <br/><input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
+    		out.println("<p>Distribute:<input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
     	}
     	
+    	// ATTACK
     	else if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_ATTACK){
     		out.println("<h3>Attack</h3>");
     		if (state.save){
@@ -283,22 +376,34 @@ public class Risk extends HttpServlet {
     			out.println("<h5 style='color:red;'>To: " + state.TERRITORIES[state.attacking_territory_to] + "</h5>");
     		}
     		
+    		if (state.save && !state.attacking && player == active_player){
+    			int localmax = Math.min(3, state.nb_soldiers_on_territory[state.attacking_territory_from] - 1);
+    			if (state.nb_soldiers_on_territory[state.attacking_territory_from] > 1){
+    				out.println("<input id='number_range' type='range'  min='1' max='" + localmax + "' value='" + localmax + "' onchange='changerange();' />");
+    				out.println("<p id='number_sign' style='color:red; display:inline; '>" + localmax + "</p>");
+    			}
+    		}
+    		
     		out.println("<input type='text' id='battle_status' value='3' style='display:none;'></input>");
     		if (active_player == player && !state.save)
     			out.println("<a href='Risk?action=FINISH_ATTACK&player=" + active_player + "'>Finish attack</a>");
     	}
     	
-    	else if (player == active_player && state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_FORTIFICATION){
+    	// FORTIFICATION
+    	else if (state.battle_status[active_player] == state.STATUS_ACTIVE_FOR_FORTIFICATION){
     		out.println("<h3>Fortification</h3>");
-			out.println("<input type='text' id='battle_status' value='4' style='display:none;'></input>");
     		
-    		if (state.save){
-    			out.println("<h5 style='color:red;'>From: " + state.TERRITORIES[state.attacking_territory_from] + "</h5>");
-        		out.println("<p>Number to move: <input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
-    		}
+    		if (player == active_player){
+    			out.println("<input type='text' id='battle_status' value='4' style='display:none;'></input>");
+    		
+    			if (state.save){
+    				out.println("<h5 style='color:red;'>From: " + state.TERRITORIES[state.attacking_territory_from] + "</h5>");
+    				out.println("<p>Number to move: <input id='number' type='number' size='10' value=0 onchange='notify()'></p>");
+    			}
 
-    		if (!state.save)
-    		out.println("<a href='Risk?action=FINISH_FORTIFY&player=" + active_player + "'>Finish fortification</a>");
+    			if (!state.save)
+    				out.println("<a href='Risk?action=FINISH_FORTIFY&player=" + active_player + "'>Finish fortification</a>");
+    		}
     	}
     	
 		out.println("<p id='notification'></p>");
@@ -306,15 +411,17 @@ public class Risk extends HttpServlet {
     }
     
     void printNextTuneInInformation(PrintWriter out){
+    	// Next turn in information
 		out.println("<form style='left:850px; top:210px; position:absolute'>");
 		out.println("<h3>Next turn in: <strong>" + state.NB_TUNED_IN_SOLDIERS[state.next_tune_in_index] + "</strong> regiments.</h3>");
 		out.println("</form>");
     }
     
     void printUpdateZone(PrintWriter out, int player){
+    	// Refresh and undo
     	out.println("<form style='left:850px; top:280px; position:absolute'>");
     	out.println("<a href='Risk?action=VIEW&player=" + player + "'>Refresh</a>");
-    	if (state.save && !state.attacking){
+    	if (state.save && !state.attacking && player == state.currentActivePlayer()){
     		out.println("<a href='Risk?action=UNDO'>Undo</a>");
     	}
     	
@@ -356,6 +463,7 @@ public class Risk extends HttpServlet {
 		printp(out, "Save: " + state.save);
 		printp(out, "Attacking from: " + state.attacking_territory_from);
 		printp(out, "Attacking to: " + state.attacking_territory_to);
+		printp(out, "Shuffle: " + Arrays.toString(state.shuffled_cards.toArray()));
 		
 		printFooter(out);
     	
@@ -431,7 +539,8 @@ public class Risk extends HttpServlet {
 			state.attacking_territory_from = territory_from;
 			int territory_to = state.territory_index.get(request.getParameter("territory_to"));
 			state.attacking_territory_to = territory_to;
-			state.attack(player, territory_from, territory_to);
+			int number = Integer.parseInt(request.getParameter("number"));
+			state.attack(player, territory_from, territory_to, number);
 			display(request, response, player, action);
 		}
 		
@@ -475,7 +584,6 @@ public class Risk extends HttpServlet {
 			display(request, response, player, action);
 		}
 		
-
 	}
 
 	/**
