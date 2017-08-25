@@ -49,7 +49,7 @@ public class State {
 									0, 1, 2, 0, 1, 2 
 								};
 	
-	final int[] NB_INITIAL_SOLDIERS = {0, 0, 40, 35, 30, 26};
+	final int[] NB_INITIAL_SOLDIERS = {0, 0, 40, 35, 30, 25};
 	
 	final String[] TERRITORIES = new String[]{ 
 			"ALASKA", "NORTH-WEST TERRITORY", "ONTARIO", "EASTERN CANADA", "GREENLAND", "ALBERTA",
