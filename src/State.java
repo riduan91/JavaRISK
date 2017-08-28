@@ -124,6 +124,7 @@ public class State {
 	int[] mission_of_player;
 	ArrayList<ArrayList<Integer>> cards_held_by_player;
 	ArrayList<Integer> shuffled_cards;
+	ArrayList<Integer> double_shuffled_cards;
 	int current_card;
 	int[] battle_status;
 	int[] available_soldiers_to_add;
@@ -216,6 +217,14 @@ public class State {
 		this.cards_held_by_player = new ArrayList<ArrayList<Integer>>();
 		Collections.shuffle(local_range);
 		this.shuffled_cards = local_range;
+		this.double_shuffled_cards = new ArrayList<Integer>();
+		for (Integer card: local_range)
+			this.double_shuffled_cards.add(card);
+		
+		//one more time
+		for (Integer card: local_range)
+			this.double_shuffled_cards.add(card);
+		
 		for (int player = 0; player < this.nb_players; player++){
 			this.cards_held_by_player.add(player, new ArrayList<Integer>());
 		}
@@ -235,8 +244,8 @@ public class State {
     	
     	//Last_card
     	Random Random = new Random();
-    	this.last_card_order = 25 + Random.nextInt(17);
-    	this.last_card = this.shuffled_cards.get(this.last_card_order);
+    	this.last_card_order = 35 + Random.nextInt(20);
+    	this.last_card = this.double_shuffled_cards.get(this.last_card_order);
     	this.last_card_taken = false;
 	}
 	
@@ -812,7 +821,7 @@ public class State {
 	}
 	
 	public void takeACard(int player){
-		Integer random_card = this.shuffled_cards.remove(0);
+		Integer random_card = this.double_shuffled_cards.remove(0);
 		if (random_card == this.last_card){
 			this.last_card_taken = true;
 		}

@@ -124,6 +124,7 @@ public class Risk extends HttpServlet {
 		out.println("<!DOCTYPE HTML>");
 		out.println("<html>");
 		out.println("<head><title>" + title + "</title><meta charset=\"UTF-8\" />");
+		out.println("<link rel=\"stylesheet\" type=\"text/css\" href=\"risk.css\" >");
 		out.println("<script type=\"text/javascript\" src=\"show_map.js\"></script>");
 		out.println("<script type=\"text/javascript\" src=\"live.js\"></script>");
 		out.println("</head>");
@@ -220,11 +221,17 @@ public class Risk extends HttpServlet {
     	}
     	
     	//Otherwise print the players with the most territories
-    	out.print("<h1>Player ");
+    	out.print("<h1>");
     	for (Integer player: state.winner()){
-    		out.print(player + " ");
+    		out.print(this.names[player] + " ");
     	}
     	out.println(" win(s) with the most territories.</h1>");
+    	
+    	for (int player=0; player < state.nb_players; ++player){
+    		out.println("<img class='card' id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:" + (160*player + 20) + "px; top:55px; width:140px; height:220px; position:absolute'>");
+    		out.println("<p style='left:" + (160*player + 20) + "px; top:285px; position:absolute' >" + this.names[player] + "</p>");
+    	}
+    	
     	out.println("</form>");
     }
     
@@ -270,7 +277,7 @@ public class Risk extends HttpServlet {
     	out.println("<img class='card' id='mission' src='Img/MA.png' style='left:" + X[0] + "px; top:" + Y +"px; width:140px; height:220px; position:absolute' onclick='updownmission(" + mission + ");'>");
     	
     	if (IntStream.of(state.battle_status).sum() >= state.STATUS_ACTIVE_FOR_FIRST_DISTRIBUTION){
-    		for (int i = state.NB_TERRITORIES - 1; i >= 0; --i){
+    		for (int i = state.NB_TERRITORIES * 2 - 1; i >= 0; --i){
     			if (i == state.last_card_order || i == (state.last_card_order - 1)){ 				
     				out.println("<img id='last_card' src='Img/CA.png' border='1' style='left:" + (X[1] + i*0.5) + "px; top:" + Y +"px; width:138px; height:216px; position:absolute; border-color:red;'>");
     			} else
@@ -461,6 +468,7 @@ public class Risk extends HttpServlet {
 		printp(out, "Attacking from: " + state.attacking_territory_from);
 		printp(out, "Attacking to: " + state.attacking_territory_to);
 		printp(out, "Shuffle: " + Arrays.toString(state.shuffled_cards.toArray()));
+		printp(out, "Double Shuffle: " + Arrays.toString(state.double_shuffled_cards.toArray()));
 		printp(out, "EP: " + state.last_card_order);
 		printp(out, "P: " + state.last_card);
 		
