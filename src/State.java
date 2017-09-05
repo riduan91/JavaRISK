@@ -593,6 +593,7 @@ public class State {
 	}
 	
 	public void addMany(int player, int territory, int number){
+		
 		if (this.okForAddMany(player, territory, number)){
 			this.nb_soldiers_on_territory[territory] += number;
 			this.available_soldiers_to_add[player] -= number;

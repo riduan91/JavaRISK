@@ -1,0 +1,18 @@
+<html>
+    <script>
+  	function renew(form)
+  	{
+		document.getElementById('reset_link').href ='Risk?action=RESET&names=' + form[0].names.value;
+  	}
+  	</script>
+<body>
+	<h1>Play RISK online</h1>
+	<p>Reset game</p>
+	<form>
+ 		<input type="text" value="" id="names" name='names'>
+ 		<input type="button" value="Set names" id="submit" onclick="renew(document.getElementsByTagName('form'));">
+	</form>
+
+	<a id='reset_link' href=''>Reset!</a>
+</body>
+</html>      

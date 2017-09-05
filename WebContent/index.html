@@ -1,0 +1,30 @@
+<html>
+    <script>
+	var today = new Date();
+  	var expiry = new Date(today.getTime() + 30 * 24 * 3600 * 1000); // plus 30 days
+
+  	function setCookie(name, value)
+  	{
+    	document.cookie=name + "=" + escape(value) + "; path=/; expires=" + expiry.toGMTString();
+  	}
+
+  	function putCookie(form)
+                //this should set the UserName cookie to the proper value;
+  	{
+   		setCookie("userName", form[0].usrname.value);
+		document.getElementById('Hello').innerHTML = "Hello " + form[0].usrname.value + "! Please click 'Go to the battle!' to play'";
+    	return true;
+  	}
+
+  </script>
+<body>
+	<h1>Play RISK online</h1>
+	<p>If you are invited by the author of this site to play this game, please enter your name.</p>
+	<form>
+ 		<input type="text" value="" id="nameBox" name='usrname'>
+ 		<input type="button" value="Subscribe" id="submit" onclick="putCookie(document.getElementsByTagName('form'));">
+	</form>
+	<p id='Hello'></p>
+	<a href='Risk?action=VIEW'>Go to the battle!</a>
+</body>
+</html>      

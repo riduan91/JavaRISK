@@ -215,7 +215,6 @@ public class Risk extends HttpServlet {
     	for (int player=0; player < state.nb_players; ++player){
         	if (state.missionCompleted(player)){
         		out.println("<h1>" + names[player] + " has accomplished his mission!</h1>");
-        		out.println("<img class='card' id='mission' src='Img/M" + state.mission_of_player[player] + ".png' style='left:640px; top:35px; width:140px; height:220px; position:absolute'>");
         		return;
         	}
     	}
